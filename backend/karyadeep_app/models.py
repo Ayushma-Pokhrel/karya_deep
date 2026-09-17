@@ -52,7 +52,7 @@ class Notification(models.Model):
    ]
 
    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='app_notifications') 
-   task = models.ForeignKey(True, on_delete=models.CASCADE, null=True, blank=True, related_name='notifications')
+   task = models.ForeignKey(Task, on_delete=models.CASCADE, null=True, blank=True, related_name='notifications')
    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, default='habit_judge')
    message = models.TextField()
    is_read = models.BooleanField(default=False)
