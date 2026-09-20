@@ -13,6 +13,7 @@ class TaskSerializer(serializers.ModelSerializer):
         read_only_fields = ['user', 'priority_score', 'created_at', 'updated_at']
 
     def validate(self, data):
+         # Habits skip the "tomorrow or later" rule — they're about today, recurring
         if data.get('is_habit'):
             return data
         due_date = data.get('due_date')

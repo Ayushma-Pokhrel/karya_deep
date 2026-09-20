@@ -36,6 +36,7 @@ def generate_task_suggestion(request):
     if not title:
         return Response({"detail": "Title is required."}, status=400)
 
+# tasks/views.py
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def task_notifications(request):
@@ -74,6 +75,7 @@ def task_notifications(request):
         "notifications": notifications,
     })
 
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def toggle_habit_completion(request, pk):
@@ -97,6 +99,7 @@ def toggle_habit_completion(request, pk):
         "completed_today": completed_today,
     })
 
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def habit_calendar(request, pk):
@@ -118,6 +121,7 @@ def habit_calendar(request, pk):
         "completed_dates": [d.isoformat() for d in logs],
     })
 
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def app_notifications(request):
@@ -134,6 +138,7 @@ def app_notifications(request):
         for n in notes
     ])
 
+
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
 def mark_notification_read(request, pk):
@@ -144,6 +149,62 @@ def mark_notification_read(request, pk):
         return Response({"id": note.id, "is_read": True})
     except Notification.DoesNotExist:
         return Response({"detail": "Notification not found."}, status=404)
+
+class LatestHabitNudgeView(APIView):
+    """
+    Returns the most recent habit_nudge Notification for a given task,
+    scoped to the requesting user so nobody can peek at another user's nudges.
+    """
+    def get(self, request, task_id):
+        task = Task.objects.filter(id=task_id, user=request.user).first()
+        if not task:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        nudge = (
+            Notification.objects
+            .filter(task=task, notification_type='habit_nudge')
+            .order_by('-created_at')
+            .first()
+        )
+        if not nudge:
+            return Response(None, status=status.HTTP_200_OK)
+
+        return Response(HabitNudgeSerializer(nudge).data)
+    
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def check_duplicate_task(request):
+    title = request.data.get('title', '').strip()
+    if not title:
+        return Response({"detail": "Title is required."}, status=400)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def merge_tasks(request):
+    """
+    Deletes the given task ids (the sub-items being absorbed) and creates
+    a single new task in their place.
+    """
+    merge_ids = request.data.get('merge_task_ids', [])
+    new_task_data = request.data.get('new_task', {})
+
+    if not merge_ids or not new_task_data.get('title'):
+        return Response({"detail": "merge_task_ids and new_task.title are required."}, status=400)
+
+    tasks_to_merge = Task.objects.filter(id__in=merge_ids, user=request.user)
+    if tasks_to_merge.count() != len(merge_ids):
+        return Response({"detail": "One or more tasks not found."}, status=404)
+
+    serializer = TaskSerializer(data=new_task_data)
+    serializer.is_valid(raise_exception=True)
+    new_task = serializer.save(user=request.user)
+
+    tasks_to_merge.delete()
+
+    return Response(TaskSerializer(new_task).data, status=201)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
