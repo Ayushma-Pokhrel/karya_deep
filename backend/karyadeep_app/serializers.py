@@ -8,7 +8,7 @@ class TaskSerializer(serializers.ModelSerializer):
         model = Task
         fields = [
             'id', 'title', 'description', 'priority', 'priority_score',
-            'due_date', 'is_completed', 'recurrence', 'recurrence_times' 'is_habit', 'created_at', 'updated_at'
+            'due_date', 'is_completed', 'recurrence', 'recurrence_times', 'is_habit', 'created_at', 'updated_at',
         ]
         read_only_fields = ['user', 'priority_score', 'created_at', 'updated_at']
 
